@@ -1,26 +1,25 @@
-
 /**
- * fatwa.js – صفحة الفتاوى النصية (محسنة مع أيقونة الطي وتحسينات)
- * تعديل: إضافة أيقونة للإشارة إلى حالة الطي، وتحسين عرض التاريخ والجواب الفارغ.
+ * fatwa.js – صفحة الفتاوى النصية (نسخة محسنة بدون categories.json)
+ * تعتمد فقط على fatwas_clean.json
+ * @version 2.0
  */
 (function() {
     'use strict';
 
     // ========== الإعدادات ==========
-    const DATA_FILE = 'fatwas_clean.json';
-    const CATEGORIES_FILE = 'categories.json';
+    const DATA_FILE = 'fatwas_clean.json'; // الملف في نفس المجلد (fatwa/)
     const ITEMS_PER_PAGE = 158;
     const DEBOUNCE_DELAY = 300;
 
     let allFatwas = [];
     let filteredFatwas = [];
-    let categoryMap = {};
     let searchTerm = '';
     let activeCategory = 'الكل';
     let allTags = ['الكل'];
     let currentPage = 1;
     let isLoading = false;
 
+    // العناصر الرئيسية
     const categoriesContainer = document.getElementById('categoriesContainer');
     const fatwaGrid = document.getElementById('fatwaGrid');
     const searchInput = document.getElementById('searchInput');
@@ -99,7 +98,7 @@
         document.head.appendChild(style);
     }
 
-    // ========== دوال مساعدة ==========
+    // دوال مساعدة
     function debounce(fn, delay) {
         let timer;
         return function (...args) {
@@ -119,23 +118,6 @@
             .trim();
     }
 
-    async function loadCategories() {
-        try {
-            const response = await fetch(CATEGORIES_FILE);
-            if (!response.ok) return {};
-            const cats = await response.json();
-            const map = {};
-            cats.forEach(cat => {
-                const id = cat.id || cat.term_id;
-                if (id) map[id.toString()] = cat.name;
-            });
-            return map;
-        } catch (e) {
-            console.warn('لم يتم تحميل ملف التصنيفات:', e);
-            return {};
-        }
-    }
-
     function showLoading() {
         isLoading = true;
         if (loadingIndicator) loadingIndicator.style.display = 'block';
@@ -148,20 +130,17 @@
         fatwaGrid.style.opacity = '1';
     }
 
+    // تحميل الفتاوى
     async function fetchFatwas() {
         showLoading();
         try {
-            const [fatwasResponse, categoryMapData] = await Promise.all([
-                fetch(DATA_FILE),
-                loadCategories()
-            ]);
-
-            if (!fatwasResponse.ok) throw new Error(`فشل تحميل الفتاوى (${fatwasResponse.status})`);
-            const fatwasData = await fatwasResponse.json();
+            const response = await fetch(DATA_FILE);
+            if (!response.ok) throw new Error(`فشل تحميل الفتاوى (${response.status})`);
+            const fatwasData = await response.json();
 
             if (!Array.isArray(fatwasData)) throw new Error('بيانات الفتاوى غير متوقعة');
 
-            // إزالة التكرارات
+            // إزالة التكرارات بناءً على id
             const seenIds = new Set();
             const uniqueFatwasData = [];
             fatwasData.forEach(item => {
@@ -171,8 +150,7 @@
                 }
             });
 
-            window.categoryMap = categoryMapData;
-
+            // تجهيز الفتاوى
             allFatwas = uniqueFatwasData.map(item => {
                 let tags = item.tags || [];
                 if (!Array.isArray(tags)) tags = [tags];
@@ -193,14 +171,14 @@
                 };
             });
 
+            // استخراج كل التصنيفات من بيانات الفتاوى
             const tagSet = new Set();
             allFatwas.forEach(f => {
                 f.tags.forEach(t => {
-                    const tagName = window.categoryMap[t] || t;
-                    tagSet.add(tagName);
+                    if (t && t.trim() !== '') tagSet.add(t);
                 });
             });
-            allTags = ['الكل', ...Array.from(tagSet)];
+            allTags = ['الكل', ...Array.from(tagSet).sort()];
 
             filteredFatwas = [...allFatwas];
             renderCategories();
@@ -213,12 +191,14 @@
         }
     }
 
+    // عرض التصنيفات
     function renderCategories() {
         categoriesContainer.innerHTML = allTags.map(cat => `
             <button class="category-btn ${cat === activeCategory ? 'active' : ''}" data-category="${cat}">${cat}</button>
         `).join('');
     }
 
+    // تطبيق التصفية
     function applyFilters() {
         const normalizedSearch = normalizeForSearch(searchTerm);
 
@@ -230,10 +210,7 @@
                 fatwa.titleNorm.includes(normalizedSearch);
             
             const matchesCategory = activeCategory === 'الكل' || 
-                fatwa.tags.some(t => {
-                    const tagName = window.categoryMap[t] || t;
-                    return tagName === activeCategory;
-                });
+                fatwa.tags.includes(activeCategory);
             
             return matchesSearch && matchesCategory;
         });
@@ -243,6 +220,7 @@
         renderPage();
     }
 
+    // عرض الصفحة الحالية
     function renderPage() {
         const start = (currentPage - 1) * ITEMS_PER_PAGE;
         const end = start + ITEMS_PER_PAGE;
@@ -251,17 +229,15 @@
         renderPagination();
     }
 
+    // التعامل مع النقر على البطاقة
     function handleCardClick(e) {
         const card = e.target.closest('.fatwa-card');
         if (!card) return;
-
-        if (e.target.closest('a')) {
-            return;
-        }
-
+        if (e.target.closest('a')) return;
         card.classList.toggle('collapsed');
     }
 
+    // نص المعاينة
     function getPreviewText(fatwa) {
         if (fatwa.title && fatwa.title.trim() !== '') {
             return fatwa.title;
@@ -271,6 +247,7 @@
         }
     }
 
+    // عرض الفتاوى
     function renderFatwas(fatwas) {
         if (fatwas.length === 0) {
             fatwaGrid.innerHTML = `<div class="empty-state"><i class="fas fa-search"></i><h3>لا توجد نتائج</h3><p>حاول بكلمات أخرى</p></div>`;
@@ -278,7 +255,6 @@
         }
 
         fatwaGrid.innerHTML = fatwas.map(f => {
-            const tagNames = f.tags.map(t => window.categoryMap[t] || t);
             const previewText = getPreviewText(f);
             const answerText = f.answer ? f.answer : '<span class="no-answer">لم يرد جواب بعد</span>';
             const dateText = f.date || 'غير محدد';
@@ -307,7 +283,7 @@
                         <span><i class="fas fa-calendar"></i> ${dateText}</span>
                     </div>
                     <div class="fatwa-tags">
-                        ${tagNames.map(t => `<span class="tag">${t}</span>`).join('')}
+                        ${f.tags.map(t => `<span class="tag">${t}</span>`).join('')}
                     </div>
                     ${f.link !== '#' ? `<a href="${f.link}" target="_blank" class="fatwa-link">عرض المصدر</a>` : ''}
                 </div>
@@ -318,6 +294,7 @@
         fatwaGrid.addEventListener('click', handleCardClick);
     }
 
+    // عرض أزرار التصفح
     function renderPagination() {
         if (!paginationContainer) return;
         const totalPages = Math.ceil(filteredFatwas.length / ITEMS_PER_PAGE);
@@ -327,21 +304,22 @@
         }
 
         let buttons = '';
-        buttons += `<button class="page-btn" ${currentPage === 1 ? 'disabled' : ''} onclick="changePage(${currentPage - 1})">‹</button>`;
+        buttons += `<button class="page-btn" ${currentPage === 1 ? 'disabled' : ''} onclick="window.changePage(${currentPage - 1})">‹</button>`;
         
         for (let i = 1; i <= totalPages; i++) {
             if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
-                buttons += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="changePage(${i})">${i}</button>`;
+                buttons += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="window.changePage(${i})">${i}</button>`;
             } else if (i === currentPage - 3 || i === currentPage + 3) {
                 buttons += `<button class="page-btn dots" disabled>...</button>`;
             }
         }
         
-        buttons += `<button class="page-btn" ${currentPage === totalPages ? 'disabled' : ''} onclick="changePage(${currentPage + 1})">›</button>`;
+        buttons += `<button class="page-btn" ${currentPage === totalPages ? 'disabled' : ''} onclick="window.changePage(${currentPage + 1})">›</button>`;
         
         paginationContainer.innerHTML = buttons;
     }
 
+    // تغيير الصفحة
     window.changePage = function(page) {
         if (page < 1 || page > Math.ceil(filteredFatwas.length / ITEMS_PER_PAGE)) return;
         currentPage = page;
@@ -349,6 +327,7 @@
         fatwaGrid.scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
 
+    // إعداد الأحداث
     function setupEvents() {
         if (searchInput) {
             searchInput.addEventListener('input', debounce((e) => {
@@ -368,18 +347,17 @@
         });
     }
 
+    // الدالة الرئيسية لتهيئة الصفحة
     window.initFatwaPage = function() {
         addStyles();
         fetchFatwas();
         setupEvents();
     };
+
+    // استدعاء الدالة تلقائياً عند تحميل الصفحة
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initFatwaPage);
+    } else {
+        initFatwaPage();
+    }
 })();
-
-// ... نهاية الملف الحالي ...
-
-// إضافة هذا الكود لاستدعاء الدالة تلقائياً بعد تحميل الصفحة
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initFatwaPage);
-} else {
-    initFatwaPage();
-}
