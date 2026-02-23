@@ -374,3 +374,12 @@
         setupEvents();
     };
 })();
+
+// ... نهاية الملف الحالي ...
+
+// إضافة هذا الكود لاستدعاء الدالة تلقائياً بعد تحميل الصفحة
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initFatwaPage);
+} else {
+    initFatwaPage();
+}
