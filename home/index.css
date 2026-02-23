@@ -480,7 +480,7 @@
 .marquee-content {
     display: flex;
     width: max-content;
-    animation: scroll-smooth 50s linear infinite;
+    animation: scroll-smooth 80s linear infinite;
 }
 
 .marquee-part {
