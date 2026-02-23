@@ -1,0 +1,407 @@
+/* fatwa.css – تصميم محسن وعصري لصفحة الفتاوى */
+
+/* === المتغيرات والأساسيات === */
+:root {
+    --primary: #016fae;
+    --primary-dark: #01579b;
+    --primary-soft: #e3f2fd;
+    --accent: #4facfe;
+    --success: #27ae60;
+    --text-main: #1e293b;
+    --text-muted: #64748b;
+    --border-light: #e2e8f0;
+    --card-bg: #ffffff;
+    --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    --shadow-hover: 0 20px 25px -5px rgba(1, 111, 174, 0.2);
+    --radius: 18px;
+    --radius-lg: 32px;
+}
+
+body {
+    background: #f8fafc;
+    font-family: 'Tajawal', sans-serif;
+    color: var(--text-main);
+    line-height: 1.6;
+}
+
+/* === حاوية البحث والتصنيفات === */
+.search-section {
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+.search-box {
+    position: relative;
+    margin-bottom: 1.5rem;
+}
+
+.search-box input {
+    width: 100%;
+    padding: 1.2rem 1.5rem 1.2rem 3.5rem;
+    border: 2px solid var(--border-light);
+    border-radius: 60px;
+    font-size: 1.1rem;
+    background: var(--card-bg);
+    transition: all 0.3s ease;
+    box-shadow: var(--shadow-sm);
+}
+
+.search-box input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px rgba(1, 111, 174, 0.15);
+}
+
+.search-box .search-icon {
+    position: absolute;
+    right: 1.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.3rem;
+    color: var(--primary);
+    pointer-events: none;
+}
+
+/* عداد النتائج */
+.results-count {
+    text-align: center;
+    font-size: 1.1rem;
+    color: var(--primary);
+    font-weight: 600;
+    margin: 0.5rem 0 1rem;
+}
+
+/* شريط التصنيفات */
+.categories-container {
+    display: flex;
+    gap: 0.75rem;
+    overflow-x: auto;
+    padding: 0.5rem 0.25rem;
+    margin: 1rem 0 2rem;
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary) var(--border-light);
+    -webkit-overflow-scrolling: touch;
+}
+
+.categories-container::-webkit-scrollbar {
+    height: 5px;
+}
+
+.categories-container::-webkit-scrollbar-thumb {
+    background: var(--primary);
+    border-radius: 10px;
+}
+
+.category-btn {
+    padding: 0.7rem 1.5rem;
+    background: var(--card-bg);
+    border: 1px solid var(--border-light);
+    border-radius: 40px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    box-shadow: var(--shadow-sm);
+}
+
+.category-btn:hover,
+.category-btn.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-hover);
+}
+
+/* === شبكة الفتاوى === */
+.fatwa-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 1.5rem;
+    margin: 2rem 0;
+}
+
+.fatwa-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    border: 1px solid var(--border-light);
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: var(--shadow-sm);
+    height: fit-content;
+    display: flex;
+    flex-direction: column;
+}
+
+.fatwa-card:hover {
+    transform: translateY(-5px);
+    border-color: var(--primary);
+    box-shadow: var(--shadow-hover);
+}
+
+.fatwa-header {
+    padding: 1.2rem 1.5rem;
+    background: linear-gradient(135deg, var(--primary-soft), white);
+    border-bottom: 1px solid var(--border-light);
+}
+
+.fatwa-id {
+    display: inline-block;
+    background: rgba(1, 111, 174, 0.1);
+    color: var(--primary);
+    padding: 0.25rem 0.75rem;
+    border-radius: 30px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.fatwa-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--primary-dark);
+    line-height: 1.5;
+    margin: 0;
+}
+
+.fatwa-body {
+    padding: 1.5rem;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.fatwa-question-box,
+.fatwa-answer-box {
+    background: #f8fafc;
+    padding: 1rem 1.2rem;
+    border-radius: 12px;
+    border-right: 4px solid;
+    transition: background 0.2s;
+}
+
+.fatwa-question-box {
+    border-right-color: var(--accent);
+}
+
+.fatwa-answer-box {
+    border-right-color: var(--success);
+}
+
+.fatwa-question-box strong,
+.fatwa-answer-box strong {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--primary);
+    font-size: 0.95rem;
+}
+
+.fatwa-question-box p,
+.fatwa-answer-box p {
+    margin: 0;
+    color: var(--text-main);
+    line-height: 1.7;
+}
+
+.fatwa-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    border-top: 1px dashed var(--border-light);
+    border-bottom: 1px dashed var(--border-light);
+    margin: 0.5rem 0;
+}
+
+.fatwa-meta span {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.fatwa-meta i {
+    color: var(--primary);
+    width: 1.2rem;
+}
+
+.fatwa-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0.5rem 0;
+}
+
+.tag {
+    background: linear-gradient(135deg, var(--primary-soft), white);
+    color: var(--primary-dark);
+    padding: 0.4rem 1rem;
+    border-radius: 30px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border: 1px solid var(--border-light);
+    transition: all 0.2s;
+}
+
+.tag:hover {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+    transform: scale(1.05);
+}
+
+.fatwa-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    background: var(--primary);
+    color: white;
+    text-decoration: none;
+    padding: 0.8rem 1.5rem;
+    border-radius: 40px;
+    font-weight: 600;
+    transition: all 0.2s;
+    margin-top: 0.5rem;
+    align-self: flex-start;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 6px rgba(1, 111, 174, 0.3);
+}
+
+.fatwa-link:hover {
+    background: var(--primary-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 12px rgba(1, 87, 155, 0.4);
+}
+
+.fatwa-link i {
+    font-size: 0.9rem;
+}
+
+/* === الترقيم (pagination) === */
+.pagination {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin: 3rem 0 2rem;
+    flex-wrap: wrap;
+}
+
+.page-btn {
+    min-width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 1px solid var(--border-light);
+    background: white;
+    color: var(--primary);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow-sm);
+}
+
+.page-btn:hover:not(:disabled) {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+    transform: scale(1.1);
+}
+
+.page-btn.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+    box-shadow: 0 4px 8px rgba(1, 111, 174, 0.3);
+}
+
+.page-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.page-btn.dots {
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    cursor: default;
+}
+
+/* === حالة عدم وجود نتائج === */
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--text-muted);
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    border: 1px solid var(--border-light);
+    grid-column: 1 / -1;
+}
+
+.empty-state i {
+    font-size: 4rem;
+    color: var(--border-light);
+    margin-bottom: 1rem;
+}
+
+.empty-state h3 {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+    color: var(--text-main);
+}
+
+.empty-state p {
+    font-size: 1rem;
+}
+
+/* === استجابة للجوال === */
+@media (max-width: 768px) {
+    .fatwa-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .search-box input {
+        padding: 1rem 1.2rem 1rem 3rem;
+        font-size: 1rem;
+    }
+    
+    .category-btn {
+        padding: 0.5rem 1.2rem;
+        font-size: 0.85rem;
+    }
+    
+    .fatwa-meta {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+    
+    .fatwa-link {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .fatwa-header {
+        padding: 1rem;
+    }
+    
+    .fatwa-body {
+        padding: 1rem;
+    }
+    
+    .fatwa-title {
+        font-size: 1.1rem;
+    }
+}
