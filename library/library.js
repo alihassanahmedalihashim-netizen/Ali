@@ -1,6 +1,7 @@
 /**
  * library.js – صفحة المكتبة (تعتمد على ملف JSON فقط)
  * نسخة محسنة للسرعة مع تقليل حجم الصور
+ * تم التعديل: إضافة SVG placeholder عند فشل تحميل الصور
  */
 (function() {
     if (!document.getElementById('booksGrid')) return;
@@ -54,7 +55,7 @@
                 DOM.grid.innerHTML = `<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> ${text}</div>`;
             }
         },
-        // placeholder صغير الحجم
+        // توليد SVG placeholder بحجم صغير مع أول حرفين من العنوان
         generatePlaceholder(title) {
             const words = title.split(' ').filter(w => w.length > 0);
             let letters = '';
@@ -163,8 +164,9 @@
             const isFav = state.favorites.includes(book.id);
             const isReading = state.readingList.includes(book.id);
             const deathYearHtml = book.deathYear ? `<span class="book-death">(ت: ${book.deathYear})</span>` : '';
-            const firstChar = book.title ? book.title.charAt(0) : 'ك';
             const safeTitle = book.title ? book.title.replace(/"/g, '&quot;') : 'بدون عنوان';
+            // توليد placeholder للصورة (سيستخدم عند فشل التحميل)
+            const placeholder = Utils.generatePlaceholder(book.title);
 
             return `
                 <div class="col" style="animation-delay: ${index * 0.02}s">
@@ -175,7 +177,8 @@
                                 alt="${safeTitle}"
                                 loading="lazy"
                                 decoding="async"
-                                onerror="this.onerror=null; this.parentNode.innerHTML += '<div class=\\'cover-placeholder\\'>${firstChar}</div>'; this.style.display='none';"
+                                data-placeholder="${placeholder}"
+                                onerror="this.onerror=null; this.src = this.dataset.placeholder;"
                             >
                             <div class="book-overlay-btns">
                                 <button class="mini-btn" data-action="toggleFav" data-id="${book.id}" title="المفضلة">
