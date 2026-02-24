@@ -1,13 +1,16 @@
 /**
- * fatwa.js – صفحة الفتاوى النصية (نسخة محسنة مع مسار مطلق وإصلاح 404)
- * تعتمد فقط على fatwas_clean.json الموجود في مجلد fatwa/
- * @version 2.2
+ * fatwa.js – صفحة الفتاوى النصية (نسخة نهائية مع تحسينات المسار ومنع الكاش)
  */
 (function() {
     'use strict';
 
     // ========== الإعدادات ==========
-    const DATA_FILE = '/fatwa/fatwas_clean.json'; // مسار مطلق من جذر الموقع
+    // بناء المسار بشكل ديناميكي بناءً على موقع الصفحة الحالية
+    const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
+    const DATA_FILE = basePath + 'fatwas_clean.json'; // إذا كان الملف في نفس مجلد fatwa.html
+    // أو إذا كان الملف في مجلد فرعي fatwa/
+    // const DATA_FILE = basePath + 'fatwa/fatwas_clean.json';
+    
     const ITEMS_PER_PAGE = 158;
     const DEBOUNCE_DELAY = 300;
 
@@ -139,29 +142,14 @@
         fatwaGrid.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle"></i><h3>خطأ في التحميل</h3><p>${message}</p><button class="btn btn-primary" onclick="location.reload()">إعادة المحاولة</button></div>`;
     }
 
-    // دالة لفحص وجود الملف قبل التحميل (اختياري)
-    async function checkFileExists(url) {
-        try {
-            const response = await fetch(url, { method: 'HEAD' });
-            return response.ok;
-        } catch {
-            return false;
-        }
-    }
-
     // تحميل الفتاوى
     async function fetchFatwas() {
         showLoading();
         try {
             console.log('جاري تحميل الفتاوى من:', DATA_FILE);
             
-            // التحقق من وجود الملف (اختياري)
-            const exists = await checkFileExists(DATA_FILE);
-            if (!exists) {
-                throw new Error(`ملف الفتاوى غير موجود في المسار: ${DATA_FILE}`);
-            }
-
-            const response = await fetch(DATA_FILE);
+            // منع التخزين المؤقت
+            const response = await fetch(DATA_FILE, { cache: 'no-cache' });
             if (!response.ok) throw new Error(`فشل تحميل الفتاوى (${response.status} ${response.statusText})`);
             
             const fatwasData = await response.json();
@@ -179,12 +167,11 @@
                 }
             });
 
-            // تجهيز الفتاوى (تم حذف link نهائياً)
+            // تجهيز الفتاوى
             allFatwas = uniqueFatwasData.map(item => {
                 let tags = item.tags || [];
                 if (!Array.isArray(tags)) tags = [tags];
 
-                // معالجة التاريخ بشكل آمن
                 let dateStr = '';
                 if (item.date) {
                     try {
@@ -214,7 +201,7 @@
                 };
             });
 
-            // استخراج كل التصنيفات من بيانات الفتاوى
+            // استخراج التصنيفات
             const tagSet = new Set();
             allFatwas.forEach(f => {
                 f.tags.forEach(t => tagSet.add(t));
@@ -225,13 +212,9 @@
             renderCategories();
             applyFilters();
 
-            // بعد التحميل والعرض، تحقق من وجود id في الرابط
-            scrollToFatwaFromURL();
-
         } catch (error) {
             console.error('خطأ في تحميل الفتاوى:', error);
-            console.error('مسار الملف:', DATA_FILE);
-            console.error('حالة الاتصال:', navigator.onLine ? 'متصل' : 'غير متصل');
+            console.error('المسار المستخدم:', DATA_FILE);
             showError(error.message);
         } finally {
             hideLoading();
@@ -279,11 +262,10 @@
         renderPagination();
     }
 
-    // التعامل مع النقر على البطاقة (expand/collapse)
+    // التعامل مع النقر على البطاقة
     function handleCardClick(e) {
         const card = e.target.closest('.fatwa-card');
         if (!card) return;
-        // لا نغلق إذا تم النقر على رابط (لكن لا يوجد رابط الآن)
         if (e.target.closest('a')) return;
         card.classList.toggle('collapsed');
     }
@@ -336,16 +318,12 @@
                     <div class="fatwa-tags">
                         ${f.tags.map(t => `<span class="tag">${t}</span>`).join('')}
                     </div>
-                    <!-- تم حذف رابط المصدر نهائياً كما هو مطلوب -->
                 </div>
             </div>
         `}).join('');
 
         fatwaGrid.removeEventListener('click', handleCardClick);
         fatwaGrid.addEventListener('click', handleCardClick);
-
-        // بعد بناء البطاقات، تحقق من وجود id في الرابط
-        scrollToFatwaFromURL();
     }
 
     // عرض أزرار التصفح
@@ -373,7 +351,6 @@
         paginationContainer.innerHTML = buttons;
     }
 
-    // تغيير الصفحة (دالة عامة)
     window.changePage = function(page) {
         if (page < 1 || page > Math.ceil(filteredFatwas.length / ITEMS_PER_PAGE)) return;
         currentPage = page;
@@ -381,7 +358,6 @@
         fatwaGrid.scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
 
-    // إعداد الأحداث
     function setupEvents() {
         if (searchInput) {
             searchInput.addEventListener('input', debounce((e) => {
@@ -401,7 +377,7 @@
         });
     }
 
-    // ========== دوال التعامل مع الفتوى المحددة من الرابط ==========
+    // دوال الانتقال إلى فتوى محددة من الرابط
     function getFatwaIdFromURL() {
         const params = new URLSearchParams(window.location.search);
         return params.get('id');
@@ -409,41 +385,30 @@
 
     function scrollToFatwaById(fatwaId) {
         if (!fatwaId) return;
-        // ننتظر قليلاً حتى يتم عرض البطاقات في DOM
         setTimeout(() => {
             const targetCard = document.querySelector(`.fatwa-card[data-id="${fatwaId}"]`);
             if (targetCard) {
-                // إزالة خاصية المطوي (collapsed) لفتح البطاقة
                 targetCard.classList.remove('collapsed');
-                // التمرير إلى البطاقة
                 targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                // تمييز البطاقة بشكل مؤقت (اختياري)
                 targetCard.style.transition = 'background 0.5s';
                 targetCard.style.background = '#fff3cd';
-                setTimeout(() => {
-                    targetCard.style.background = '';
-                }, 2000);
-            } else {
-                console.log('لم يتم العثور على الفتوى رقم:', fatwaId);
+                setTimeout(() => targetCard.style.background = '', 2000);
             }
         }, 300);
     }
 
     function scrollToFatwaFromURL() {
         const fatwaId = getFatwaIdFromURL();
-        if (fatwaId) {
-            scrollToFatwaById(fatwaId);
-        }
+        if (fatwaId) scrollToFatwaById(fatwaId);
     }
 
-    // الدالة الرئيسية لتهيئة الصفحة
+    // الدالة الرئيسية
     window.initFatwaPage = function() {
         addStyles();
         fetchFatwas();
         setupEvents();
     };
 
-    // استدعاء الدالة تلقائياً عند تحميل الصفحة
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initFatwaPage);
     } else {
