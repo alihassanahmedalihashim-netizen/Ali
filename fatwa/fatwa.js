@@ -134,6 +134,34 @@
         fatwaGrid.style.opacity = '1';
     }
 
+// بعد hideLoading (أو في أي مكان داخل النطاق)
+function getFatwaIdFromURL() {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('id');
+}
+
+function scrollToFatwaById(fatwaId) {
+    if (!fatwaId) return;
+    setTimeout(() => {
+        const targetCard = document.querySelector(`.fatwa-card[data-id="${fatwaId}"]`);
+        if (targetCard) {
+            targetCard.classList.remove('collapsed');
+            targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // تأثير تمييز
+            targetCard.style.transition = 'background 0.5s';
+            targetCard.style.background = '#fff3cd';
+            setTimeout(() => targetCard.style.background = '', 2000);
+        }
+    }, 300);
+}
+
+// داخل renderFatwas، بعد السطر fatwaGrid.innerHTML = ... أضف:
+const fatwaIdFromURL = getFatwaIdFromURL();
+if (fatwaIdFromURL) {
+    scrollToFatwaById(fatwaIdFromURL);
+}
+    
+
     // عرض رسالة خطأ واضحة
     function showError(message) {
         fatwaGrid.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle"></i><h3>خطأ في التحميل</h3><p>${message}</p><button class="btn btn-primary" onclick="location.reload()">إعادة المحاولة</button></div>`;
