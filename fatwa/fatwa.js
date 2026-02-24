@@ -22,7 +22,12 @@
     // العناصر الرئيسية
     const categoriesContainer = document.getElementById('categoriesContainer');
     const fatwaGrid = document.getElementById('fatwaGrid');
-    const searchInput = document.getElementById('searchInput');
+ // داخل renderFatwas، بعد السطر fatwaGrid.innerHTML = ... أضف:
+const fatwaIdFromURL = getFatwaIdFromURL();
+if (fatwaIdFromURL) {
+    scrollToFatwaById(fatwaIdFromURL);
+}
+      const searchInput = document.getElementById('searchInput');
     const paginationContainer = document.getElementById('paginationContainer');
     let loadingIndicator = document.getElementById('loadingIndicator');
 
@@ -155,11 +160,7 @@ function scrollToFatwaById(fatwaId) {
     }, 300);
 }
 
-// داخل renderFatwas، بعد السطر fatwaGrid.innerHTML = ... أضف:
-const fatwaIdFromURL = getFatwaIdFromURL();
-if (fatwaIdFromURL) {
-    scrollToFatwaById(fatwaIdFromURL);
-}
+
     
 
     // عرض رسالة خطأ واضحة
