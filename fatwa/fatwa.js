@@ -1,13 +1,13 @@
 /**
- * fatwa.js – صفحة الفتاوى النصية (نسخة محسنة بدون categories.json)
- * تعتمد فقط على fatwas_clean.json
- * @version 2.0
+ * fatwa.js – صفحة الفتاوى النصية (نسخة محسنة مع إصلاح المسار وإزالة link)
+ * تعتمد فقط على fatwas_clean.json الموجود في مجلد fatwa/
+ * @version 2.1
  */
 (function() {
     'use strict';
 
     // ========== الإعدادات ==========
-    const DATA_FILE = 'fatwas_clean.json'; // الملف في نفس المجلد (fatwa/)
+    const DATA_FILE = 'fatwa/fatwas_clean.json'; // المسار الصحيح داخل مجلد fatwa/
     const ITEMS_PER_PAGE = 158;
     const DEBOUNCE_DELAY = 300;
 
@@ -24,10 +24,10 @@
     const fatwaGrid = document.getElementById('fatwaGrid');
     const searchInput = document.getElementById('searchInput');
     const paginationContainer = document.getElementById('paginationContainer');
-    const loadingIndicator = document.getElementById('loadingIndicator');
+    let loadingIndicator = document.getElementById('loadingIndicator');
 
     if (!categoriesContainer || !fatwaGrid) {
-        console.error('العناصر الأساسية غير موجودة');
+        console.error('العناصر الأساسية غير موجودة في الصفحة');
         return;
     }
 
@@ -36,20 +36,24 @@
         const statsDiv = document.createElement('div');
         statsDiv.id = 'resultsCount';
         statsDiv.className = 'results-count';
-        searchInput?.parentNode?.insertBefore(statsDiv, searchInput.nextSibling);
+        if (searchInput && searchInput.parentNode) {
+            searchInput.parentNode.insertBefore(statsDiv, searchInput.nextSibling);
+        }
     }
 
     // إنشاء مؤشر التحميل إذا لم يكن موجوداً
     if (!loadingIndicator) {
-        const indicator = document.createElement('div');
-        indicator.id = 'loadingIndicator';
-        indicator.className = 'loading-spinner';
-        indicator.style.display = 'none';
-        indicator.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحميل...';
-        fatwaGrid.parentNode.insertBefore(indicator, fatwaGrid);
+        loadingIndicator = document.createElement('div');
+        loadingIndicator.id = 'loadingIndicator';
+        loadingIndicator.className = 'loading-spinner';
+        loadingIndicator.style.display = 'none';
+        loadingIndicator.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحميل...';
+        if (fatwaGrid.parentNode) {
+            fatwaGrid.parentNode.insertBefore(loadingIndicator, fatwaGrid);
+        }
     }
 
-    // إضافة الأنماط اللازمة
+    // إضافة الأنماط اللازمة (إذا لم تكن موجودة في fatwa.css)
     function addStyles() {
         const styleId = 'fatwa-custom-styles';
         if (document.getElementById(styleId)) return;
@@ -130,15 +134,23 @@
         fatwaGrid.style.opacity = '1';
     }
 
+    // عرض رسالة خطأ واضحة
+    function showError(message) {
+        fatwaGrid.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle"></i><h3>خطأ في التحميل</h3><p>${message}</p><button class="btn btn-primary" onclick="location.reload()">إعادة المحاولة</button></div>`;
+    }
+
     // تحميل الفتاوى
     async function fetchFatwas() {
         showLoading();
         try {
+            console.log('جاري تحميل الفتاوى من:', DATA_FILE);
             const response = await fetch(DATA_FILE);
-            if (!response.ok) throw new Error(`فشل تحميل الفتاوى (${response.status})`);
+            if (!response.ok) throw new Error(`فشل تحميل الفتاوى (${response.status} ${response.statusText})`);
+            
             const fatwasData = await response.json();
+            console.log('تم تحميل البيانات، عدد العناصر:', fatwasData.length);
 
-            if (!Array.isArray(fatwasData)) throw new Error('بيانات الفتاوى غير متوقعة');
+            if (!Array.isArray(fatwasData)) throw new Error('بيانات الفتاوى غير متوقعة (ليست مصفوفة)');
 
             // إزالة التكرارات بناءً على id
             const seenIds = new Set();
@@ -150,10 +162,25 @@
                 }
             });
 
-            // تجهيز الفتاوى
+            // تجهيز الفتاوى (تم حذف link نهائياً)
             allFatwas = uniqueFatwasData.map(item => {
                 let tags = item.tags || [];
                 if (!Array.isArray(tags)) tags = [tags];
+
+                // معالجة التاريخ بشكل آمن
+                let dateStr = '';
+                if (item.date) {
+                    try {
+                        const d = new Date(item.date);
+                        if (!isNaN(d.getTime())) {
+                            dateStr = d.toLocaleDateString('ar-EG');
+                        } else {
+                            dateStr = 'غير محدد';
+                        }
+                    } catch {
+                        dateStr = 'غير محدد';
+                    }
+                }
 
                 return {
                     id: item.id,
@@ -161,9 +188,8 @@
                     question: item.question || '',
                     answer: item.answer || '',
                     mufti: item.mufti || '',
-                    date: item.date ? new Date(item.date).toLocaleDateString('ar-EG') : '',
-                    tags: tags,
-                    link: item.link || '#',
+                    date: dateStr,
+                    tags: tags.filter(t => t && t.trim() !== ''),
                     questionNorm: normalizeForSearch(item.question || ''),
                     answerNorm: normalizeForSearch(item.answer || ''),
                     muftiNorm: normalizeForSearch(item.mufti || ''),
@@ -174,9 +200,7 @@
             // استخراج كل التصنيفات من بيانات الفتاوى
             const tagSet = new Set();
             allFatwas.forEach(f => {
-                f.tags.forEach(t => {
-                    if (t && t.trim() !== '') tagSet.add(t);
-                });
+                f.tags.forEach(t => tagSet.add(t));
             });
             allTags = ['الكل', ...Array.from(tagSet).sort()];
 
@@ -184,8 +208,8 @@
             renderCategories();
             applyFilters();
         } catch (error) {
-            console.error(error);
-            fatwaGrid.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle"></i><h3>خطأ في التحميل</h3><p>${error.message}</p></div>`;
+            console.error('خطأ في تحميل الفتاوى:', error);
+            showError(error.message);
         } finally {
             hideLoading();
         }
@@ -216,7 +240,10 @@
         });
 
         currentPage = 1;
-        document.getElementById('resultsCount').textContent = `📊 ${filteredFatwas.length} فتوى`;
+        const resultsCountEl = document.getElementById('resultsCount');
+        if (resultsCountEl) {
+            resultsCountEl.textContent = `📊 ${filteredFatwas.length} فتوى`;
+        }
         renderPage();
     }
 
@@ -229,10 +256,11 @@
         renderPagination();
     }
 
-    // التعامل مع النقر على البطاقة
+    // التعامل مع النقر على البطاقة (expand/collapse)
     function handleCardClick(e) {
         const card = e.target.closest('.fatwa-card');
         if (!card) return;
+        // لا نغلق إذا تم النقر على رابط (لكن لا يوجد رابط الآن)
         if (e.target.closest('a')) return;
         card.classList.toggle('collapsed');
     }
@@ -285,7 +313,7 @@
                     <div class="fatwa-tags">
                         ${f.tags.map(t => `<span class="tag">${t}</span>`).join('')}
                     </div>
-                    ${f.link !== '#' ? `<a href="${f.link}" target="_blank" class="fatwa-link">عرض المصدر</a>` : ''}
+                    <!-- تم حذف رابط المصدر نهائياً كما هو مطلوب -->
                 </div>
             </div>
         `}).join('');
@@ -319,7 +347,7 @@
         paginationContainer.innerHTML = buttons;
     }
 
-    // تغيير الصفحة
+    // تغيير الصفحة (دالة عامة)
     window.changePage = function(page) {
         if (page < 1 || page > Math.ceil(filteredFatwas.length / ITEMS_PER_PAGE)) return;
         currentPage = page;
