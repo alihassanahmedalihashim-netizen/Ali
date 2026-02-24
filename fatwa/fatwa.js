@@ -21,13 +21,12 @@
 
     // العناصر الرئيسية
     const categoriesContainer = document.getElementById('categoriesContainer');
-    const fatwaGrid = document.getElementById('fatwaGrid');
- // داخل renderFatwas، بعد السطر fatwaGrid.innerHTML = ... أضف:
-const fatwaIdFromURL = getFatwaIdFromURL();
-if (fatwaIdFromURL) {
-    scrollToFatwaById(fatwaIdFromURL);
-}
-      const searchInput = document.getElementById('searchInput');
+     const fatwaGrid = document.getElementById('fatwaGrid');
+
+    
+    // داخل renderFatwas، بعد السطر fatwaGrid.innerHTML = ... أضف:
+     
+    const searchInput = document.getElementById('searchInput');
     const paginationContainer = document.getElementById('paginationContainer');
     let loadingIndicator = document.getElementById('loadingIndicator');
 
@@ -140,27 +139,6 @@ if (fatwaIdFromURL) {
     }
 
 // بعد hideLoading (أو في أي مكان داخل النطاق)
-function getFatwaIdFromURL() {
-    const params = new URLSearchParams(window.location.search);
-    return params.get('id');
-}
-
-function scrollToFatwaById(fatwaId) {
-    if (!fatwaId) return;
-    setTimeout(() => {
-        const targetCard = document.querySelector(`.fatwa-card[data-id="${fatwaId}"]`);
-        if (targetCard) {
-            targetCard.classList.remove('collapsed');
-            targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            // تأثير تمييز
-            targetCard.style.transition = 'background 0.5s';
-            targetCard.style.background = '#fff3cd';
-            setTimeout(() => targetCard.style.background = '', 2000);
-        }
-    }, 300);
-}
-
-
     
 
     // عرض رسالة خطأ واضحة
