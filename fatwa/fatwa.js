@@ -1,4 +1,5 @@
-/**
+
+ /**
  * fatwa.js – صفحة الفتاوى النصية (نسخة محسنة مع إصلاح المسار وإزالة link)
  * تعتمد فقط على fatwas_clean.json الموجود في مجلد fatwa/
  * @version 2.1
@@ -21,11 +22,7 @@
 
     // العناصر الرئيسية
     const categoriesContainer = document.getElementById('categoriesContainer');
-     const fatwaGrid = document.getElementById('fatwaGrid');
-
-    
-    // داخل renderFatwas، بعد السطر fatwaGrid.innerHTML = ... أضف:
-     
+    const fatwaGrid = document.getElementById('fatwaGrid');
     const searchInput = document.getElementById('searchInput');
     const paginationContainer = document.getElementById('paginationContainer');
     let loadingIndicator = document.getElementById('loadingIndicator');
@@ -137,9 +134,6 @@
         if (loadingIndicator) loadingIndicator.style.display = 'none';
         fatwaGrid.style.opacity = '1';
     }
-
-// بعد hideLoading (أو في أي مكان داخل النطاق)
-    
 
     // عرض رسالة خطأ واضحة
     function showError(message) {
@@ -395,4 +389,4 @@
     } else {
         initFatwaPage();
     }
-})();
+})();   
