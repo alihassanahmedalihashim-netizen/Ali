@@ -1,6 +1,9 @@
-
 /**
- * index.js – الصفحة الرئيسية (نسخة متكاملة مع جلب الكتب والفتاوى)
+ * index.js – الصفحة الرئيسية (نسخة متكاملة مع جلب آخر 5 كتب من JSON)
+ * التعديلات:
+ * - عرض آخر 5 كتب من ملف ziydia_books_detailed.json بدلاً من Google Drive.
+ * - مدة التبديل بين بطاقات الكتب 3 ثوانٍ.
+ * - عرض الكتب بنفس تصميم البطاقات مع صورة الغلاف أو أيقونة بديلة.
  */
 (function() {
     // شريط التمرير الذهبي
@@ -20,78 +23,60 @@
         });
     }
 
-    // معرف مجلد الكتب الرئيسي في Google Drive
-    const DRIVE_BOOKS_FOLDER_ID = '1uz7TxlwSgIG3E3aC70Ly89z5F1fFIcu7';
-
-    async function getAllFilesInFolderRecursively(folderId, accumulatedFiles = [], pageToken = null) {
-        const query = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
-        let url = `https://www.googleapis.com/drive/v3/files?q=${query}&key=${CONFIG.YOUTUBE_API_KEY}&fields=files(id,name,thumbnailLink,size,mimeType,modifiedTime,webViewLink,mimeType),nextPageToken`;
-        if (pageToken) url += `&pageToken=${pageToken}`;
-
-        const response = await fetchWithTimeout(url, {}, 10000);
-        if (!response.ok) throw new Error(`HTTP error ${response.status}`);
-
-        const data = await response.json();
-        const items = data.files || [];
-
-        const folders = items.filter(f => f.mimeType === 'application/vnd.google-apps.folder');
-        const files = items.filter(f => f.mimeType !== 'application/vnd.google-apps.folder');
-
-        accumulatedFiles.push(...files);
-
-        if (data.nextPageToken) {
-            await getAllFilesInFolderRecursively(folderId, accumulatedFiles, data.nextPageToken);
-        }
-
-        for (const folder of folders) {
-            await getAllFilesInFolderRecursively(folder.id, accumulatedFiles);
-        }
-
-        return accumulatedFiles;
-    }
-
-    function getBookIcon(mimeType) {
-        if (mimeType?.includes('pdf')) return '📕';
-        if (mimeType?.includes('epub')) return '📘';
-        if (mimeType?.includes('document')) return '📗';
-        return '📖';
-    }
-
-    async function fetchBooksFromDrive() {
+    // دالة جلب آخر 5 كتب من ملف JSON
+    async function fetchLatestBooksFromJSON() {
         const track = document.getElementById('booksTrack');
         if (!track) return;
 
         track.innerHTML = '<div class="loading-spinner" style="text-align:center; padding:40px;"><i class="fas fa-spinner fa-spin"></i> جاري تحميل الكتب...</div>';
 
         try {
-            const allFiles = await getAllFilesInFolderRecursively(DRIVE_BOOKS_FOLDER_ID);
-            if (allFiles.length === 0) {
-                track.innerHTML = '<div class="error-message"><i class="fas fa-exclamation-circle"></i> لا توجد كتب في هذا المجلد</div>';
+            const response = await fetch('ziydia_books_detailed.json'); // نفس مسار ملف المكتبة
+            if (!response.ok) throw new Error(`فشل تحميل الكتب (${response.status})`);
+            const books = await response.json();
+
+            if (!Array.isArray(books) || books.length === 0) {
+                track.innerHTML = '<div class="error-message"><i class="fas fa-exclamation-circle"></i> لا توجد كتب</div>';
                 return;
             }
 
+            // ترتيب الكتب تنازلياً (نفترض أن الترتيب في الملف تصاعدي حسب الإضافة)
+            const sorted = [...books].reverse(); // أحدث كتاب أولاً
+            const latest = sorted.slice(0, 5); // آخر 5 كتب
+
             track.innerHTML = '';
-            allFiles.forEach(file => {
+            latest.forEach(book => {
                 const card = document.createElement('div');
                 card.className = 'card-single';
 
-                const iconChar = getBookIcon(file.mimeType);
-                const viewUrl = file.webViewLink || `https://drive.google.com/file/d/${file.id}/view`;
-                const downloadUrl = `https://drive.google.com/uc?export=download&id=${file.id}`;
+                // صورة الغلاف أو أيقونة افتراضية
+                const coverHtml = book.coverUrl 
+                    ? `<img src="${book.coverUrl}" alt="${book.title}" loading="lazy" onerror="this.onerror=null; this.style.display='none'; this.parentNode.innerHTML+='<div class=\\'book-icon\\' style=\\'font-size:4rem; text-align:center;\\'>📖</div>';">`
+                    : `<div class="book-icon" style="font-size:4rem; text-align:center;">📖</div>`;
+
+                // رابط الكتاب (إذا لم يوجد url نستخدم #)
+                const bookUrl = book.url || '#';
 
                 card.innerHTML = `
-                    <div class="book-icon">${iconChar}</div>
-                    <div class="book-title">${file.name || 'بدون عنوان'}</div>
-                    <div class="buttons">
-                        <a href="${viewUrl}" target="_blank" class="btn btn-view">عرض</a>
-                        <a href="${downloadUrl}" target="_blank" class="btn btn-download">تحميل</a>
+                    <div style="position: relative;">
+                        ${coverHtml}
+                    </div>
+                    <div style="font-weight: bold; font-size: 1.2rem; color: var(--primary-dark); margin: 10px 0 5px; text-align: center;">
+                        ${book.title || 'بدون عنوان'}
+                    </div>
+                    <div style="font-size: 0.9rem; color: var(--text-soft); text-align: center; margin-bottom: 10px;">
+                        ${book.author || 'غير معروف'}
+                        ${book.deathYear ? ` (ت: ${book.deathYear})` : ''}
+                    </div>
+                    <div style="margin-top: auto; display: flex; gap: 8px; justify-content: center;">
+                        <a href="${bookUrl}" target="_blank" class="btn btn-primary btn-sm" style="flex:1; text-decoration:none;">قراءة</a>
                     </div>
                 `;
                 track.appendChild(card);
             });
         } catch (error) {
-            console.error('فشل جلب الكتب:', error);
-            track.innerHTML = `<div class="error-message"><i class="fas fa-exclamation-circle"></i> ${getErrorMessage(error)}</div>`;
+            console.error('خطأ في جلب الكتب:', error);
+            track.innerHTML = `<div class="error-message">❌ ${error.message}</div>`;
         }
     }
 
@@ -133,14 +118,14 @@
         }
     }
 
-    // دالة جديدة لجلب آخر 3 فتاوى من ملف JSON
+    // دالة جلب آخر 5 فتاوى (كما كانت)
     async function fetchLatestFatwas() {
         const track = document.getElementById('fatwaTrack');
         if (!track) return;
         track.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> جاري تحميل الفتاوى...</div>';
 
         try {
-            const response = await fetch('fatwas_clean.json'); // تأكد من المسار الصحيح
+            const response = await fetch('fatwas_clean.json');
             if (!response.ok) throw new Error(`فشل تحميل الفتاوى (${response.status})`);
             const fatwas = await response.json();
 
@@ -149,29 +134,34 @@
                 return;
             }
 
-            // ترتيب تنازلي حسب id (الأحدث أولاً) - يمكن تعديله حسب الحقل المناسب
             const sorted = [...fatwas].sort((a, b) => (b.id || 0) - (a.id || 0));
-            const latest = sorted.slice(0, 3); // آخر 3 فتاوى
+            const latest = sorted.slice(0, 5);
 
             track.innerHTML = '';
             latest.forEach(fatwa => {
                 const card = document.createElement('div');
                 card.className = 'card-single';
-                // عند النقر، انتقل إلى صفحة الفتاوى العامة (يمكن تعديل الرابط ليشمل معرف الفتوى)
                 card.setAttribute('data-href', 'fatwa.html');
                 card.addEventListener('click', () => window.location.href = card.dataset.href);
 
-                // مقتطف السؤال
-                const question = fatwa.question || 'لا يوجد سؤال';
+                const title = fatwa.title && fatwa.title.trim() !== '' 
+                    ? fatwa.title 
+                    : (fatwa.question ? fatwa.question.substring(0, 60) + '…' : 'فتوى بدون عنوان');
+                
+                const question = fatwa.question || '';
                 const shortQuestion = question.length > 80 ? question.substring(0, 80) + '…' : question;
-                // مقتطف الجواب
+
                 const answer = fatwa.answer || 'لم يرد جواب بعد';
                 const shortAnswer = answer.length > 100 ? answer.substring(0, 100) + '…' : answer;
 
                 card.innerHTML = `
-                    <div style="font-size: 3rem; text-align: center; margin-bottom: 10px;">📄</div>
-                    <div style="font-weight: bold; color: var(--primary-dark); margin-bottom: 8px;">${shortQuestion}</div>
-                    <div style="font-size: 0.9rem; color: var(--text-soft); background: var(--primary-soft); padding: 8px; border-radius: 8px;">${shortAnswer}</div>
+                    <div style="font-weight: bold; font-size: 1.2rem; color: var(--primary-dark); margin-bottom: 8px; text-align: center;">
+                        ${title}
+                    </div>
+                    ${shortQuestion ? `<div style="font-size: 0.9rem; color: var(--text-soft); margin-bottom: 8px; background: var(--primary-soft); padding: 6px; border-radius: 8px;">${shortQuestion}</div>` : ''}
+                    <div style="font-size: 0.9rem; color: var(--text-soft); background: var(--card-bg); padding: 8px; border-radius: 8px; border: 1px solid var(--border-light);">
+                        ${shortAnswer}
+                    </div>
                     <div style="margin-top: 10px; display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-muted);">
                         <span>👤 ${fatwa.mufti || 'غير محدد'}</span>
                         <span>📅 ${fatwa.date || ''}</span>
@@ -185,7 +175,8 @@
         }
     }
 
-    function initSingleSlider(trackId, prevId, nextId, pauseId) {
+    // دالة تهيئة السلايدر
+    function initSingleSlider(trackId, prevId, nextId, pauseId, intervalDuration = 5000) {
         const track = document.getElementById(trackId);
         const prevBtn = document.getElementById(prevId);
         const nextBtn = document.getElementById(nextId);
@@ -196,7 +187,7 @@
         if (cards.length === 0) return;
 
         let currentIndex = 0;
-        let interval;
+        let autoPlayInterval;
         let paused = false;
 
         function updatePosition() {
@@ -216,10 +207,10 @@
         }
 
         function startAutoPlay() {
-            if (interval) clearInterval(interval);
-            interval = setInterval(() => {
+            if (autoPlayInterval) clearInterval(autoPlayInterval);
+            autoPlayInterval = setInterval(() => {
                 if (!paused) next();
-            }, CONFIG.SLIDER_INTERVAL);
+            }, intervalDuration);
         }
 
         prevBtn.addEventListener('click', () => { prev(); startAutoPlay(); });
@@ -239,12 +230,13 @@
         // تشغيل جميع السلايدرات بعد تحميل بياناتها
         Promise.all([
             fetchYouTubeVideos(),
-            fetchBooksFromDrive(),
+            fetchLatestBooksFromJSON(), // الآن من JSON بدلاً من Drive
             fetchLatestFatwas()
         ]).then(() => {
-            initSingleSlider('videoTrack', 'prevVideo', 'nextVideo', 'pauseVideoBtn');
-            initSingleSlider('booksTrack', 'prevBook', 'nextBook', 'pauseBooksBtn');
-            initSingleSlider('fatwaTrack', 'prevFatwa', 'nextFatwa', 'pauseFatwaBtn');
+            initSingleSlider('videoTrack', 'prevVideo', 'nextVideo', 'pauseVideoBtn', CONFIG.SLIDER_INTERVAL || 5000);
+            // مدة الكتب 3 ثوانٍ
+            initSingleSlider('booksTrack', 'prevBook', 'nextBook', 'pauseBooksBtn', 3000);
+            initSingleSlider('fatwaTrack', 'prevFatwa', 'nextFatwa', 'pauseFatwaBtn', 3000);
         }).catch(err => {
             console.error('خطأ في تحميل أحد العناصر:', err);
         });
